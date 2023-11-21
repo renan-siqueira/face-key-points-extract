@@ -1,0 +1,13 @@
+{
+    "input_path": "images",
+    "models": [
+        "dlib",
+        "mediapipe"
+    ],
+    "images_format": [
+        ".png",
+        ".jpg",
+        ".jpeg"
+    ],
+    "keypoints_color": [255, 255, 255]
+}
