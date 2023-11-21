@@ -1,0 +1,17 @@
+|- .venv
+|- app
+    |- modules
+        |- __init__.py
+        |- extractor.py
+    |- settings
+        |- __init__.py
+        |- config.py
+    |- utils
+        |- __init__.py
+        |- utils.py
+    |- __init__.py
+    |- main.py
+|- .gitignore
+|- params.json
+|- requirements.txt
+|- run.py
