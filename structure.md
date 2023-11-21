@@ -11,6 +11,9 @@
         |- utils.py
     |- __init__.py
     |- main.py
+|- images
+|- models
+|- output
 |- .gitignore
 |- params.json
 |- requirements.txt
