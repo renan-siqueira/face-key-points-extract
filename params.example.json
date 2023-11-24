@@ -1,7 +1,8 @@
 {
-    "input_path": "images3",
+    "input_path": "images",
     "models": [
-        "dlib"
+        "dlib",
+        "mediapipe"
     ],
     "images_format": [
         ".png",
@@ -10,5 +11,5 @@
     ],
     "keypoints_color": [255, 255, 255],
     "margin_ratio": 0.1,
-    "num_threads": 16
+    "num_threads": 8
 }
