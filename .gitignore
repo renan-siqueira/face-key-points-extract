@@ -2,8 +2,8 @@
 .vscode
 __pycache__
 
-params.json
-
 *.jpg
 *.jpeg
 *.png
+
+params.json
