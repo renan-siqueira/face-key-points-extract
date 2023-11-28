@@ -1,7 +1,7 @@
 {
-    "input_path": "images3",
+    "input_path": "C:/Users/Meu Computador/Desktop/projetos/00-Datasets/processed_videos/ARCH_ENEMY_Alissa_White-Gluz/original/face",
     "models": [
-        "dlib"
+        "dlib", "mediapipe"
     ],
     "images_format": [
         ".png",
@@ -10,5 +10,5 @@
     ],
     "keypoints_color": [255, 255, 255],
     "margin_ratio": 0.1,
-    "num_threads": 16
+    "num_threads": 4
 }

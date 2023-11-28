@@ -24,14 +24,15 @@ def process_image(image_path, params):
         print(e)
 
 
-def execute(params):
+def execute(params, debug_mode=False):
     num_threads = params.get('num_threads', 4)
     print('\n---> Threads used:', num_threads, '\n')
 
     image_paths = []
+    input_path = 'images' if debug_mode else params['input_path']
     for img_format in params.get("images_format", []):
         image_paths.extend(
-            glob.glob(os.path.join(params.get("input_path", None), '*' + img_format))
+            glob.glob(os.path.join(input_path, '*' + img_format))
         )
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
