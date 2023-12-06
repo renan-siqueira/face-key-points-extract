@@ -7,7 +7,7 @@ from ..utils import utils
 from ..settings import config
 
 
-def align_face_dlib(image, landmarks):
+def align_face_dlib(image, landmarks, desired_width=None):
     left_eye = np.array([landmarks.part(36).x, landmarks.part(36).y])
     right_eye = np.array([landmarks.part(45).x, landmarks.part(45).y])
 
@@ -15,15 +15,21 @@ def align_face_dlib(image, landmarks):
     dX = right_eye[0] - left_eye[0]
     angle = np.degrees(np.arctan2(dY, dX))
 
+    eye_distance = np.sqrt((dX ** 2) + (dY ** 2))
+
+    scale = 1
+    if desired_width is not None and eye_distance > 0:
+        scale = desired_width / eye_distance
+
     eyes_center = (int((left_eye[0] + right_eye[0]) // 2), int((left_eye[1] + right_eye[1]) // 2))
     
-    M = cv2.getRotationMatrix2D(eyes_center, angle, scale=1)
+    M = cv2.getRotationMatrix2D(eyes_center, angle, scale)
     aligned_image = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]), flags=cv2.INTER_CUBIC)
 
     return aligned_image
 
 
-def extract_face_features_dlib(image_path, model_name, image_basename, keypoint_color, margin_ratio):
+def extract_face_features_dlib(image_path, model_name, image_basename, keypoint_color, margin_ratio, first_face_width):
     model_predictor = config.APP_PATH_MODEL_DLIB_FILE
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor(model_predictor)
@@ -40,7 +46,14 @@ def extract_face_features_dlib(image_path, model_name, image_basename, keypoint_
     for face in faces:
         landmarks = predictor(gray, face)
 
-        image_aligned = align_face_dlib(image, landmarks)
+        if first_face_width is None:
+            left_eye = np.array([landmarks.part(36).x, landmarks.part(36).y])
+            right_eye = np.array([landmarks.part(45).x, landmarks.part(45).y])
+            dX = right_eye[0] - left_eye[0]
+            dY = right_eye[1] - left_eye[1]
+            first_face_width = np.sqrt((dX ** 2) + (dY ** 2))
+
+        image_aligned = align_face_dlib(image, landmarks, first_face_width)
 
         gray_aligned = cv2.cvtColor(image_aligned, cv2.COLOR_BGR2GRAY)
         
@@ -53,7 +66,7 @@ def extract_face_features_dlib(image_path, model_name, image_basename, keypoint_
             x_min, x_max, y_min, y_max = utils.extract_bounding_box_dlib(landmarks_aligned, 68, image_aligned.shape[1], image_aligned.shape[0], margin_ratio)
             x_min, x_max, y_min, y_max = map(int, [x_min, x_max, y_min, y_max])
 
-            # 1:1
+            # 1:1 aspect ratio
             width = x_max - x_min
             height = y_max - y_min
             max_side = max(width, height)
@@ -75,12 +88,14 @@ def extract_face_features_dlib(image_path, model_name, image_basename, keypoint_
 
             output_dir = utils.create_output_directory(model_name)
 
-            # utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}_with_points.jpg', face_image_with_points)
-            utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}_without_points.jpg', face_image_without_points)
-            
+            if keypoint_color:
+                utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}_with_points.jpg', face_image_with_points)
+
+            utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}.jpg', face_image_without_points)
             face_count += 1
         else:
             print(f"No aligned faces found in the image for model {model_name}.")
+    return first_face_width
 
 
 def _get_landmark_point(face_landmarks, index, image_shape):
@@ -89,7 +104,7 @@ def _get_landmark_point(face_landmarks, index, image_shape):
     return (x, y)
 
 
-def extract_face_features_mediapipe(image_path, model_name, image_basename, keypoint_color, margin_ratio):
+def extract_face_features_mediapipe(image_path, model_name, image_basename, keypoint_color, margin_ratio, first_face_width):
     mp_drawing = mp.solutions.drawing_utils
     mp_face_mesh = mp.solutions.face_mesh
     drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
@@ -106,9 +121,14 @@ def extract_face_features_mediapipe(image_path, model_name, image_basename, keyp
             x_min, x_max, y_min, y_max = utils.extract_bounding_box_mediapipe(face_landmarks, image.shape, margin_ratio)
             x_min, x_max, y_min, y_max = map(int, [x_min, x_max, y_min, y_max])
 
-            # Alinhamento da face
-            eye_left = _get_landmark_point(face_landmarks, 130, image.shape) # ponto do olho esquerdo
-            eye_right = _get_landmark_point(face_landmarks, 359, image.shape) # ponto do olho direito
+            eye_left = _get_landmark_point(face_landmarks, 130, image.shape)
+            eye_right = _get_landmark_point(face_landmarks, 359, image.shape)
+
+            if first_face_width is None:
+                dX = eye_right[0] - eye_left[0]
+                dY = eye_right[1] - eye_left[1]
+                first_face_width = np.sqrt((dX ** 2) + (dY ** 2))
+
             angle = math.atan2(eye_right[1] - eye_left[1], eye_right[0] - eye_left[0])
             degrees = math.degrees(angle)
             center = ((x_min + x_max) // 2, (y_min + y_max) // 2)
@@ -126,9 +146,12 @@ def extract_face_features_mediapipe(image_path, model_name, image_basename, keyp
                     cv2.circle(face_image_with_points, (x, y), 1, keypoint_color, -1)
 
             output_dir = utils.create_output_directory(model_name)
-            # utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}_with_points.jpg', face_image_with_points)
-            utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}_without_points.jpg', face_image_without_points)
 
+            if keypoint_color:
+                utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}_with_points.jpg', face_image_with_points)
+            
+            utils.save_image(f'{output_dir}/{image_basename}_face_{face_count}.jpg', face_image_without_points)
             face_count += 1
 
     face_mesh.close()
+    return first_face_width
